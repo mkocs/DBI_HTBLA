@@ -34,6 +34,15 @@ select distinct farbe from teile t join projektlieferungen pl on t.tnr = pl.tnr 
 select lname from lieferanten l join projektlieferungen pl on l.lnr = pl.lnr join teile t on pl.tnr = t.tnr where t.stadt = l.stadt;
 select distinct lname from lieferanten l join projektlieferungen pl on l.lnr = pl.lnr join teile t on pl.tnr = t.tnr where t.stadt = l.stadt;
 
+/*so umbauen, dass es ohne distinct funktioniert (mit subquery) (vom 08.01.2015)*/
+/*schluesselwort IN wird verwendet, um in einer liste zu suchen*/
+/*die liste besteht in dem fall aus dem subquery*/
+select lname from lieferanten where lnr in
+(select l.lnr from lieferanten l 
+join projektlieferungen pl on l.lnr = pl.lnr 
+join teile t on pl.tnr = t.tnr where t.stadt = l.stadt);
+
+
 /*liste mit allen lieferantennamen, projektnamen und teilnamen die irgendwo hin geliefert wurden*/
 select pname, lname, tname from projektlieferungen pl 
 join teile t on pl.tnr = t.tnr 
@@ -48,6 +57,32 @@ join lieferanten l on pl.lnr = l.lnr
 where t.stadt is not null;
 
 /*hasta luego selecto * no yes por favor;*/
+
+/*subquery --> query innerhalb des query*/
+select lnr, rabatt from lieferanten where rabatt < (select rabatt from lieferanten where lnr = 'L1');
+
+/*Nummer der Projekte, die nicht mit roten Teilen von Lieferanten aus Paris beliefert werden*/
+/*related subquery --> steht in beziehung mit dem uebergeordneten subquery*/
+select pnr 
+from projekte p 
+where not exists (select * 
+from projektlieferungen pl join teile t on pl.tnr = t.tnr join lieferanten l on l.lnr = pl.lnr 
+where t.farbe = 'rot' and l.stadt = 'Paris' and p.pnr = pl.pnr);
+
+/*ueberpruefung, ob p2 ein rotes teil hat, das aus paris kommt*/
+select pnr 
+from projekte p 
+where exists (select * 
+from projektlieferungen pl join teile t on pl.tnr = t.tnr join lieferanten l on l.lnr = pl.lnr 
+where t.farbe = 'rot' and l.stadt = 'Paris' and p.pnr = pl.pnr);
+
+select pl.pnr
+from projektlieferungen pl
+join teile t on pl.tnr = t.tnr
+join lieferanten l on l.lnr = pl.lnr
+where t.farbe = 'rot'
+and l.stadt = 'Paris';
+
 
 
 
