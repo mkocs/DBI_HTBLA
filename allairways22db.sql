@@ -72,3 +72,71 @@ join flughafen f1 on p.nach_hcode = f1.hcode
 where (lower(p.von_hcode) like 'vie') 
 and (lower(f1.stadt) like '%frankfurt%' or lower(f1.stadt) like '%münchen%');
 
+--zeige alle entfernungen an, die nur in einer richtung angegeben sind
+-- in anderen worten: gib alle entfernungen aus, zu denen keine in der anderen richtung existieren
+select * from entfernung e
+where not exists(select nach_hcode, von_hcode from entfernung e2 where e2.nach_hcode = e.von_hcode and e2.von_hcode = e.nach_hcode);
+
+--------------------------------------------------------------------------------------------------------------------------------------
+--
+-- fuer welche flugzeugtypen sind die sitzplaetze konfiguriert?
+select bezeichnung from flugzeugtyp ft
+join sitz s on s.typid = ft.typid
+group by ft.bezeichnung
+having count(s.typid) > 0;
+
+-- besser
+select * from flugzeugtyp t
+where exists(select * from sitz s where s.typid = t.typid);
+
+-- schlecht, weil 1297 Datensaetze gefunden werden
+-- und verarbeitet werden
+select distinct t.* from flugzeugtyp t
+join sitz s on t.typid = s.typid;
+
+select distinct typid from sitz;
+
+-- gib alle flugzeugtypen aus, fuer die mehr als 201 sitzplaetze konfiguriert sind
+select t.typid, t.bezeichnung, count(*) from flugzeugtyp t
+join sitz s on s.typid = t.typid
+group by t.typid, t.bezeichnung
+having count(*) > 201;
+
+-- gib zu jedem flugzeughersteller die anzahl der verfuegbaren flugzeugtypen  an
+-- zusatzaufgabe: nur jene, die mehr als 25 typen haben
+select h.bezeichnung, count(t.typid) from flugzeugtyp t
+join hersteller h on h.herstellerid = t.herstellerid
+group by h.bezeichnung
+order by count(t.typid) desc;
+
+select h.bezeichnung, count(t.typid) from flugzeugtyp t
+join hersteller h on h.herstellerid = t.herstellerid
+group by h.bezeichnung
+having count(t.typid) > 25
+order by count(t.typid) desc;
+
+
+select * from fluggesellschaft;
+select * from flugplan;
+select * from flugzeugtyp;
+
+
+-- ausgehend vom flugplan, gib zu den fluggesellschaften OS und LH die Anzahl der Einsaetze der Flugzeugtypen an
+-- in einem 2. Schritt beschraenke die Ausgabe auf mehr als 70 Einsaetze
+-- Aufgabe: Kuerzel und Name der Fluggesellschaft, Typ und Bezeichnung des Flugzeugs, Anzahl der Einsaetze
+-- Sortiere auch nach obigen Felder (sinnvoll)
+select g.gcode, g.name, fp.typid, t.bezeichnung, count(fp.typid) from fluggesellschaft g
+join flugplan fp on g.gcode = fp.gcode and g.gcode in('OS', 'LH')
+join flugzeugtyp t on t.typid = fp.typid
+group by g.gcode, g.name, fp.typid, t.bezeichnung
+order by count(fp.typid) desc;
+
+select g.gcode, g.name, fp.typid, t.bezeichnung, count(fp.typid) from fluggesellschaft g
+join flugplan fp on g.gcode = fp.gcode and g.gcode in('OS', 'LH')
+join flugzeugtyp t on t.typid = fp.typid
+group by g.gcode, g.name, fp.typid, t.bezeichnung
+having count(fp.typid) > 70
+order by count(fp.typid) desc;
+
+
+
