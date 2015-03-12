@@ -139,4 +139,12 @@ having count(fp.typid) > 70
 order by count(fp.typid) desc;
 
 
-
+-- gib jene flugplaene aus wo die Reichweite des Flugzeugtyps
+-- kleiner als die Entfernung der Flughaefen im Flugplan ist
+-- bonus: gib die namen der flughaefen aus
+select f.name as VON_NAME, f2.name as NACH_NAME, p.gcode, p.plannr, t.typid, t.bezeichnung from flugplan p
+join flugzeugtyp t on p.typid = t.typid
+join entfernung e on p.von_hcode = e.von_hcode and p.nach_hcode = e.nach_hcode
+join flughafen f on f.hcode = p.von_hcode
+join flughafen f2 on f2.hcode = p.nach_hcode
+where t.reichweite_km < e.entfernung_km;
