@@ -148,3 +148,51 @@ join entfernung e on p.von_hcode = e.von_hcode and p.nach_hcode = e.nach_hcode
 join flughafen f on f.hcode = p.von_hcode
 join flughafen f2 on f2.hcode = p.nach_hcode
 where t.reichweite_km < e.entfernung_km;
+
+
+-- suche flugzeugtypen, die mehrere unterschiedliche Klassen in ihrer
+-- sitzkonfiguration haben
+select h.bezeichnung, t.typid, t.bezeichnung from flugzeugtyp t
+join sitz s on t.typid = s.typid
+join klasse k on s.kcode = k.kcode
+join hersteller h on h.herstellerid = t.herstellerid
+group by h.bezeichnung, t.typid, t.bezeichnung
+having count(distinct k.kcode) > 1;
+
+select h.bezeichnung, t.bezeichnung, count(*) as Anzahl_Sitze, count(distinct k.kcode) as Anzahl_Klassen, min(k.kcode), max(k.kcode) from sitz s
+join klasse k on s.kcode = k.kcode
+join flugzeugtyp t on s.typid = t.typid
+join hersteller h on h.herstellerid = t.herstellerid
+group by h.bezeichnung, t.bezeichnung
+having count(distinct k.kcode) > 1
+order by count(s.typid) desc;
+
+select h.bezeichnung, t.bezeichnung, count(*) as Anzahl_Sitze, count(distinct k.kcode) as Anzahl_Klassen, min(k.kcode), max(k.kcode) from sitz s
+join klasse k on s.kcode = k.kcode
+join flugzeugtyp t on s.typid = t.typid
+join hersteller h on h.herstellerid = t.herstellerid
+group by h.bezeichnung, t.bezeichnung
+having min(s.kcode) <> max(s.kcode);
+
+-- zu obigen flugzeugtypen gib die kleinste und groesste Sitzreihe pro Klasse aus
+-- Ausgabe: Bezeichnung des Flugzeugtyps, Bezeichnung der Klasse,
+-- kleinste Sitzreihe, groesste Sitzreihe
+select k.kcode, t.bezeichnung, k.bezeichnung, min(s.reihe), max(s.reihe) from sitz s
+join flugzeugtyp t on t.typid = s.typid
+join klasse k on k.kcode = s.kcode
+where s.typid in (select s.typid from sitz s
+                  group by s.typid
+                  having min(s.kcode) <> max(s.kcode))
+group by k.kcode, t.typid, t.bezeichnung, k.bezeichnung
+order by t.bezeichnung, k.bezeichnung;
+
+select k.kcode, t.bezeichnung, k.bezeichnung, min(s.reihe), max(s.reihe) from sitz s
+join flugzeugtyp t on t.typid = s.typid
+join klasse k on k.kcode = s.kcode
+group by k.kcode, t.typid, t.bezeichnung, k.bezeichnung
+having t.typid in (select s.typid from sitz s
+                  group by s.typid
+                  having min(s.kcode) <> max(s.kcode))
+order by t.bezeichnung, k.bezeichnung;
+
+
