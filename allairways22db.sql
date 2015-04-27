@@ -196,3 +196,115 @@ having t.typid in (select s.typid from sitz s
 order by t.bezeichnung, k.bezeichnung;
 
 
+-- gib pro flugzeugtyp die anzahl der sitzreihen und die anzahl der unterschiedlichen
+-- sitzplaetze pro reihe (=Buchstabe) aus
+-- zusatzaufgabe: zeige auch die Bezeichnung von Flugzeugtyp und hersteller
+select h.bezeichnung, t.typid, t.bezeichnung, count(distinct s.reihe), count(distinct s.buchstabe), max(s.reihe) from flugzeugtyp t
+join sitz s on t.typid = s.typid
+join hersteller h on t.herstellerid = h.herstellerid
+group by h.bezeichnung, t.typid, t.bezeichnung;
+
+
+-- gib pro flugzeugtyp und sitzklasse die anzahl der sitzreihen und die anzahl der
+-- unterschiedlichen Sitzplaetze pro reihe (=buchstabe) aus
+-- Zusatzaufgabe: Zeige auch die Bezeichnung von Klasse, Hersteller und Flugzeugtyp an
+select t.typid, k.kcode, k.bezeichnung, h.bezeichnung, t.bezeichnung, count(distinct s.reihe), count(distinct s.buchstabe) from flugzeugtyp t
+join sitz s on t.typid = s.typid
+join klasse k on k.kcode = s.kcode
+join hersteller h on t.herstellerid = h.herstellerid
+group by t.typid, k.kcode, k.bezeichnung, h.bezeichnung, t.bezeichnung
+order by t.typid asc;
+
+-- gib alle fluggesellschaften aus, zu denen flugzeuge existieren
+-- AUSGABE: alle felder aus fluggesellschaft
+--
+-- ZUSATZAUFGABE: gib alle flugzeugtypen aus, zu denen flugzeuge existieren
+-- AUSGABE: bezeichnung von hersteller und flugzeugtyp
+select * from fluggesellschaft g
+where exists(select 1 from flugzeug t where g.gcode = t.gcode);
+
+--select distinct h.bezeichnung, t.bezeichnung from flugzeugtyp t
+--join hersteller h on t.herstellerid = h.herstellerid
+--join flugzeug f on f.typid = t.typid;
+
+select h.bezeichnung, t.bezeichnung from flugzeugtyp t
+join hersteller h on h.herstellerid = t.herstellerid
+where exists(select 1 from flugzeug f where f.typid = t.typid);
+
+-- gib zu den flugzeugtypen die anzahl der flugzeuge aus
+-- sortiere absteigend
+-- ergaenze um die bezeichnung des flugzeugtypes und den hersteller
+select t.bezeichnung, h.bezeichnung, count(f.flugzeugnr) from flugzeugtyp t
+join flugzeug f on f.typid = t.typid
+join hersteller h on h.herstellerid = t.herstellerid
+group by t.bezeichnung, h.bezeichnung
+order by count(f.flugzeugnr) desc;
+
+select f.typid, count(*) as anzahl, max(t.bezeichnung), min(t.bezeichnung) from flugzeug f
+join flugzeugtyp t on t.typid = f.typid
+join hersteller h on h.herstellerid = t.herstellerid
+group by f.typid
+order by anzahl desc;
+
+-- wenn man nun auch die typen angezeigt bekommen will, von denen es keine Flugzeuge gibt, dann kann man eine basistabelle angeben
+-- welche auch angezeigt wird, wenn die anderen nicht vorhanden sind
+
+-- gibt nur 8 datensaetze aus
+select f.typid, count(z.typid) as anzahl from flugzeugtyp f
+join flugzeug z on z.typid = f.typid
+group by f.typid
+order by anzahl desc;
+
+-- gibt alle aus. auch die, die null sind
+select f.typid, count(z.typid) as anzahl from flugzeugtyp f
+left outer join flugzeug z on z.typid = f.typid
+group by f.typid
+order by anzahl desc;
+
+-- beispiel, warum das so ist
+select * from flugzeugtyp f
+left outer join flugzeug z on z.typid = f.typid;
+
+
+-- erstelle eine liste aller flugzeugtypen des herstellers Airbus.
+-- gib die anzahl der verwendeten flugzeuge an (0 wenn den Typ niemand verwendet)
+select t.typid, t.bezeichnung, h.bezeichnung, count(p.typid) from flugzeugtyp t
+join hersteller h on h.herstellerid = t.herstellerid
+join flugplan p on p.typid = t.typid
+where h.bezeichnung = 'Airbus'
+group by t.typid, t.bezeichnung, h.bezeichnung
+having count(p.typid) > 0;
+
+-- loesung
+select h.bezeichnung, t.bezeichnung, count(f.regnr) as ANZAHL_VERWENDUNGEN, count(*) as ANZAHL_DATENSAETZE from flugzeugtyp t
+join hersteller h on h.herstellerid = t.herstellerid
+left outer join flugzeug f on f.typid = t.typid -- durch das left outer join werden auch felder angezeigt, die 0/null sind
+where h.bezeichnung = 'Airbus'
+group by h.bezeichnung, t.bezeichnung
+order by count(f.regnr) desc;
+
+-- ohne left outer join
+select h.bezeichnung, t.bezeichnung, count(f.regnr) as ANZAHL_VERWENDUNGEN from flugzeugtyp t
+join hersteller h on h.herstellerid = t.herstellerid
+join flugzeug f on f.typid = t.typid -- durch das left outer join werden auch felder angezeigt, die 0/null sind
+where h.bezeichnung = 'Airbus'
+group by h.bezeichnung, t.bezeichnung
+union
+select h.bezeichnung, t.bezeichnung, 0
+from flugzeugtyp t
+join hersteller h on h.herstellerid = t.herstellerid
+where h.bezeichnung = 'Airbus'
+and not exists (select * from flugzeug f where f.typid = t.typid);
+
+-- gib zu jeder fluggesellschaft die anzahl ihrer flugzeuge aus.
+-- gesellschaften ohne flugzeuge sollen mit 0 ausgegeben werden
+-- sortiere so, dass die mit 0 am ende sind
+-- ausgabe: name der gesellschaft und anzahl der flugzeuge
+
+select g.name, count(f.regnr) from fluggesellschaft g
+left outer join flugzeug f on g.gcode = f.gcode
+group by g.name
+order by count(f.regnr) desc;
+
+
+
