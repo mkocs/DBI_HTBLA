@@ -307,4 +307,60 @@ group by g.name
 order by count(f.regnr) desc;
 
 
+-- gib zu jedem ticket mit ausstellungsdatum 1.2.2015 Boarding und Passagierdaten an
+-- AUSGABE: GCode, PlanNR, TicketNR, Sitzreihe, Sitzbuchstabe, Startzeit des Fluges
+-- ZUSATZ1: Code und Name des Zielflugshafens
+-- ZUSATZ2: Ersetze fehlende String (null) mit N.N. und fehlene Zahlen durch -1
+
+-- normal
+select t.GCODE, t.PLANNR, t.TNR, s.REIHE, s.BUCHSTABE, f.STARTZEIT, p.PID, p.TITEL, p.ANREDE, p.NAME from TICKET t
+left outer join BOARDINGCARD b on b.TNR = t.TNR
+left outer join FLUG f on f.FID = b.FID
+left outer join SITZ s on b.SITZID = s.SITZID
+join PASSAGIER p on t.PID = p.PID
+where t.AUSSTELLUNGSDATUM = '1.2.2015';
+
+-- zusatz 1
+select t.GCODE, t.PLANNR, t.TNR, s.REIHE, s.BUCHSTABE, f.STARTZEIT, fp.NACH_HCODE, p.PID, p.TITEL, p.ANREDE, p.NAME from TICKET t
+left outer join BOARDINGCARD b on b.TNR = t.TNR
+left outer join FLUG f on f.FID = b.FID
+left outer join SITZ s on b.SITZID = s.SITZID
+join PASSAGIER p on t.PID = p.PID
+left outer join FLUGPLAN fp on fp.PLANNR = f.PLANNR and fp.GCODE = t.GCODE -- plannr und gcode zusammen sind schluessel
+left outer join FLUGHAFEN fh on fh.HCODE = fp.NACH_HCODE
+where t.AUSSTELLUNGSDATUM = '1.2.2015';
+
+-- zusatz 2
+select t.GCODE, t.PLANNR, t.TNR, COALESCE(s.REIHE, -1) as REIHE, COALESCE(s.BUCHSTABE, 'N.N.') as SITZ_BUCHSTABE, f.STARTZEIT, COALESCE(fp.NACH_HCODE, 'N.N.'), p.PID, COALESCE(p.TITEL, 'N.N.'), p.ANREDE, p.NAME from TICKET t
+left outer join BOARDINGCARD b on b.TNR = t.TNR
+left outer join FLUG f on f.FID = b.FID
+left outer join SITZ s on b.SITZID = s.SITZID
+join PASSAGIER p on t.PID = p.PID
+left outer join FLUGPLAN fp on fp.PLANNR = f.PLANNR and fp.GCODE = t.GCODE
+left outer join FLUGHAFEN fh on fh.HCODE = fp.NACH_HCODE
+where t.AUSSTELLUNGSDATUM = '1.2.2015';
+
+-- summiere entfernung * person mit boardingcard pro flugplan
+-- AUSGABE: schluessel zu flugplan, summe personenkilometer (entfernung*personen)
+select fp.gcode, fp.plannr, e.entfernung_km * count(p.pid) as PERSONENKILOMETER from boardingcard bc
+join ticket t on bc.tnr = t.tnr
+join passagier p on p.pid = t.pid
+join flugplan fp on t.gcode = fp.gcode and t.plannr = fp.plannr
+join entfernung e on e.von_hcode = fp.von_hcode and e.nach_hcode = fp.nach_hcode
+group by fp.plannr, fp.gcode, e.entfernung_km;
+
+select fp.gcode, fp.plannr, sum(e.entfernung_km) as personen_km
+from boardingcard c
+join ticket t on c.tnr = t.tnr
+join flugplan fp on fp.plannr = t.plannr and fp.gcode = t.gcode
+join entfernung e on fp.von_hcode = e.von_hcode and fp.nach_hcode = e.nach_hcode
+group by fp.gcode, fp.plannr;
+
+select fp.gcode, fp.plannr, sum(e.entfernung_km) from flugplan fp
+join flug f on f.plannr = fp.plannr and f.gcode = fp.gcode
+join boardingcard bc on f.fid = bc.fid
+join entfernung e on e.nach_hcode = fp.nach_hcode and e.von_hcode = fp.von_hcode
+group by fp.gcode, fp.plannr;
+
+
 
