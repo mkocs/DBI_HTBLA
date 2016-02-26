@@ -299,36 +299,119 @@ end;
 select * from lager;
 select * from lieferung;
 
---declare
---nums int;
---lanz int;
---
---procedure stueckabnahme(art_nr int, anz int) as
---  cursor get_lieferungen_lager is 
---    select l.lnr, nvl(sum(li.stueck),0) as stueckzahl, l.stueckkap, li.lfndnr
---    from lager l
---    left join lieferung li on li.lnr = l.lnr
---    group by l.lnr, l.stueckkap, li.lfndnr
---    order by l.lnr;
---
---begin
---  nums := anz;
---  for lmb in get_lieferungen_lager loop
---    if nums > 0
---    then
---      if lmb.stueckzahl < nums 
---      then
---        DELETE FROM lieferung WHERE lnr = lmb.lnr and lfndnr = lmb.lfndnr;
---        select stueck into lanz from lieferung where lnr = lmb.lnr and lfndnr = lmb.lfndnr;
---        nums := nums - lanz;
---      else
---        UPDATE lieferung SET stueck=stueck-nums WHERE lnr = lmb.lnr and lfndnr = lmb.lfndnr;
---        nums := 0;
---      end if;
---    end if;
---  end loop;
---end stueckabnahme;
---begin
---  stueckabnahme(1, 20);
---end;
---/
+-- Lager 5c mit exceptions
+-- Erstelle eine stored Function die zu einer Artikelnummer und einen Stichtag den Preis ermittelt
+-- CREATE OR REPLACE
+-- FUNCTION getpreis (p_anr int, p_datum date) ....
+--update preise set Gueltig_Bis='2015-12-31' where ANr = 1 and Gueltig_Bis = '2014-01-31' and Gueltig_Ab = '2014-01-01';
+set serveroutput on
+
+create or replace function getpreis(p_anr int, p_datum date) return number AS
+pr number;
+too_high exception;
+begin
+  select preis into pr from preise where ANr = p_anr and (p_datum >= nvl(Gueltig_Ab, sysdate) and p_datum <= nvl(Gueltig_Bis, p_datum));
+  if pr >= 90 then
+    raise too_high;
+    return pr;
+  end if;
+  
+  exception
+    when too_high then
+      DBMS_OUTPUT.put_line('Mehr als 90');
+      pr := 90;
+    when too_many_rows then
+      DBMS_OUTPUT.put_line('Mehr als eine Reihe');
+      raise_application_error(-20000, 'das war meine');
+end getpreis;
+/
+
+delete from preise where preis > 90;
+select * from preise;
+SELECT getpreis(1, sysdate) from dual; -- sollte den Wert 3 liefern
+select getpreis(1, '2014-03-01') from dual;
+select getpreis(0, sysdate) from dual;
+select getpreis(1, '2015-01-01') from dual; -- ruft too_many_rows exception hervor
+select getpreis(1, '2017-02-01') from dual;
+SELECT anr, bezeichnung, getpreis(anr, sysdate) from artikel; 
+SELECT anr, bezeichnung, getpreis(anr, '2014-03-01') from artikel;
+
+
+-- Lager 5 mit Exception, die geworfen wird, wenn
+-- die Anzahl der Stk. in der Lieferung nicht unterzubringen ist
+set serveroutput on
+
+-- Lager 5 Procedure Anlieferung Daten oraSQL mySQL
+-- erstelle eine Procedure Anlieferung mit den Parametern (P_Artikelbzeichnung VARCHAR, P_Datum date, P_Stueck INT)
+-- Die Procedure muß für die richtige Artikelnummer,
+-- Lagerstellen mit verfügbaren Platz suchen und die entsprechende Stückanzahl in alle nötigen Lagerplätze verbuchen.
+-- Die Belegung eines Lagers ist durch Summieren von Lieferung zu ermitteln.
+-- Bsp.: Es sind 160 Äpfel einzulagern. Dazu sind 5 Lager mit 50 Plätzen vorhanden. Im Lager 1 sind bereits 20 Plätze belegt.
+--set serveroutput on
+
+-- mit exception, die geworfen wird, wenn nicht alle gelagert werden koennen
+declare
+
+procedure Anlieferung(P_Artikelbezeichnung varchar, P_Datum date, P_Stueck INT) as
+gesamtlagerstand int;
+nCount int;
+liefNr int;
+artNr int;
+cursor getLager is select lnr, stueckkap from lager;
+cursor getLieferung (l number) is select lfndnr, stueck from lieferung where lnr = l;
+cursor getArtikelNr (bezeichn varchar) is select anr from Artikel where Bezeichnung = bezeichn;
+
+some_left exception;
+
+begin
+  nCount := P_Stueck;
+  open getArtikelNr(P_Artikelbezeichnung);
+  fetch getArtikelNr into artNr;
+  close getArtikelNr;
+  for l in getLager loop
+    gesamtlagerstand := 0;
+    liefNr := 0;
+    for lie in getLieferung(l.lnr) loop
+      gesamtlagerstand := gesamtlagerstand + lie.stueck;
+      liefNr := lie.lfndnr;
+    end loop;
+    if gesamtlagerstand < l.stueckkap then
+      if gesamtlagerstand >= 0 then
+        if nCount > (l.stueckkap-gesamtlagerstand) then
+          insert into Lieferung(LNR, LFNDNR, DATUM,STUECK, ANR) values(l.lnr, (liefNr+1), P_Datum, (l.stueckkap-gesamtlagerstand), artNr);
+          nCount :=  nCount - (l.stueckkap-gesamtlagerstand);
+        else
+          insert into Lieferung(LNR, LFNDNR, DATUM,STUECK, ANR) values(l.lnr, (liefNr+1), P_Datum, nCount, artNr);
+          nCount :=  0;
+        end if;
+      else
+        insert into Lieferung(LNR, LFNDNR, DATUM,STUECK, ANR) values(l.lnr, (liefNr+1), P_Datum, l.stueckkap, artNr);
+        nCount := nCount - l.stueckkap;
+      end if;
+    end if;
+  end loop;
+  if ncount > 0 then
+    raise some_left;
+  end if;
+  
+  exception
+    when some_left then
+      raise_application_error(-20000, 'Es konnten nicht alle gelagert werden.');
+      
+end Anlieferung;
+
+begin
+    Anlieferung('Apfel', sysdate, 5000);
+end;
+/
+
+/* Trigger Beispiel vom 23.2.2016 in trigger.sql*/
+
+
+/* Trigger Beispiel vom 26.2.2016 in trigger.sql
+ *  Um ein Table abzuaendern: 
+ *  alter table <name> add <feldname> <datentyp>
+ *  alter table <name> modify/change <feldname>
+ *  alter table <name> drop/delete <feldname>
+ */
+ 
