@@ -124,3 +124,23 @@ delete from lieferung where lfndnr = 6 and lnr = 11;
 update lieferung set stueck=-25 where lfndnr = 3 and lnr = 11;
 update lieferung set stueck=-2 where lfndnr = 2 and lnr = 12;
 update lieferung set stueck=-5 where lfndnr = 6 and lnr = 11;
+
+-- trigger, der den aktuellen Lagerstand immer aktualisiert in das Lager eintraegt
+-- und gleichzeitig kontrolliert, ob es unter 0 geht oder ob die kapazitaet ueberschritten wird
+create or replace trigger lager_max
+before update on lager
+for each row
+declare
+begin
+  if :new.aktueller_lagerstand > :new.StueckKap
+  then
+    raise_application_error(-20000, 'Kapazitaet bei Lager ' || :new.lnr || ' ueberschritten');
+  elsif :new.aktueller_lagerstand < 0
+  then
+    raise_application_error(-20999, 'Mindestlagerstand bei Lager ' || :new.lnr || ' unterschritten');
+  end if;
+end;
+/
+
+select * from lager;
+

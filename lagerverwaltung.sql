@@ -415,3 +415,22 @@ end;
  *  alter table <name> drop/delete <feldname>
  */
  
+-- lager 10
+-- Ein Lager mit vorgebener ID soll aufgelöst werden.
+-- All seine darin enthaltenen Artikel sind anderen Lagerstellen zuzuordnen.
+declare
+procedure Lager_Del(lid int) as
+lagerId int;
+begin
+  lagerId := lid;
+  for lie in (select * from lieferung where lnr = lid) loop
+    
+  end loop;
+end Lager_Del;
+
+begin
+  Lager_Del(12);
+end;
+/
+
+delete from artikel where anr = 33;

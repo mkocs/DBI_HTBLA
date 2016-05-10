@@ -6,22 +6,25 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 
-<AnchorPane id="AnchorPane" prefHeight="327.0" prefWidth="398.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="fx_jdbc.FXMLDocumentController">
+<AnchorPane id="AnchorPane" prefHeight="327.0" prefWidth="432.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="fx_jdbc.FXMLDocumentController">
     <children>
         <Label fx:id="label" layoutX="126" layoutY="120" minHeight="16" minWidth="69" />
-      <TableView fx:id="fx_tabelle" layoutX="14.0" layoutY="29.0" prefHeight="200.0" prefWidth="371.0" tableMenuButtonVisible="true">
+      <TableView fx:id="fx_tabelle" layoutX="14.0" layoutY="29.0" prefHeight="200.0" prefWidth="403.0" tableMenuButtonVisible="true">
          <contextMenu>
             <ContextMenu fx:id="contextMenu">
               <items>
                 <MenuItem fx:id="deleteAction" mnemonicParsing="false" onAction="#handleDeleteButtonAction" text="Delete" />
                   <MenuItem fx:id="updateAction" mnemonicParsing="false" onAction="#handleUpdateAction" text="Update" />
                   <MenuItem fx:id="addAction" mnemonicParsing="false" onAction="#handleAddAction" text="Add" />
+                  <MenuItem fx:id="changePriceAction" mnemonicParsing="false" onAction="#handleChangePriceAction" text="Change price" />
               </items>
             </ContextMenu>
          </contextMenu></TableView>
-      <Button fx:id="addButton" layoutX="132.0" layoutY="252.0" mnemonicParsing="false" onAction="#handleAddButtonAction" text="Add" />
+      <Button fx:id="addButton" layoutX="122.0" layoutY="252.0" mnemonicParsing="false" onAction="#handleAddButtonAction" text="Add" />
       <TextField fx:id="nameTextField" layoutX="14.0" layoutY="252.0" prefHeight="27.0" prefWidth="103.0" promptText="Name" />
-      <Button fx:id="updateButton" disable="true" layoutX="132.0" layoutY="290.0" mnemonicParsing="false" onAction="#handleUpdateButtonAction" text="Update" />
-      <TextField fx:id="nameUpdateTextField" disable="true" layoutX="14.0" layoutY="290.0" prefHeight="27.0" prefWidth="103.0" promptText="New Name" />
+      <Button fx:id="updateButton" disable="true" layoutX="122.0" layoutY="290.0" mnemonicParsing="false" onAction="#handleUpdateButtonAction" text="Update" />
+      <TextField fx:id="nameUpdateTextField" disable="true" layoutX="14.0" layoutY="290.0" prefHeight="27.0" prefWidth="103.0" promptText="New name" />
+      <TextField fx:id="priceUpdateTextField" disable="true" layoutX="213.0" layoutY="290.0" prefHeight="27.0" prefWidth="103.0" promptText="New price" />
+      <Button fx:id="changePriceButton" disable="true" layoutX="322.0" layoutY="290.0" mnemonicParsing="false" onAction="#handleChangePriceButtonAction" text="Change price" />
     </children>
 </AnchorPane>

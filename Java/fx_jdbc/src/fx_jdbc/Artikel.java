@@ -7,20 +7,23 @@ package fx_jdbc;
 
 /**
  *
- * @author hoef
+ * @author iiiiisch
  */
 public class Artikel {
     private int anr;
     private String bezeichnung;
+    private double preis;
 
-    public Artikel(int anr, String bezeichnung) {
+    public Artikel(int anr, String bezeichnung, double preis) {
         this.anr = anr;
         this.bezeichnung = bezeichnung;
+        this.preis = preis;
     }
     
     public Artikel() {
         this.anr = 0;
         this.bezeichnung = null;
+        this.preis = 0;
     }
 
     public int getAnr() {
@@ -39,5 +42,11 @@ public class Artikel {
         this.bezeichnung = bezeichnung;
     }
     
+    public double getPreis() {
+        return this.preis;
+    }
     
+    public void setPreis(double preis) {
+        this.preis = preis;
+    }
 }

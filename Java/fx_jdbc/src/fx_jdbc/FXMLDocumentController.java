@@ -30,7 +30,7 @@ public class FXMLDocumentController {
     int lastClickedItem = 0;
     
     @FXML
-    private Button deleteButton;
+    private MenuItem changePriceAction;
 
     @FXML
     private TextField nameTextField;
@@ -42,10 +42,19 @@ public class FXMLDocumentController {
     private Label label;
 
     @FXML
+    private TextField priceUpdateTextField;
+
+    @FXML
     private MenuItem deleteAction;
 
     @FXML
     private MenuItem updateAction;
+
+    @FXML
+    private MenuItem addAction;
+
+    @FXML
+    private Button changePriceButton;
 
     @FXML
     private ContextMenu contextMenu;
@@ -58,18 +67,18 @@ public class FXMLDocumentController {
 
     @FXML
     private TableView<Artikel> fx_tabelle;
-    
+
     void updateTable() {
         PreparedStatement prep;
         ResultSet rs;
 
-        String sql = "SELECT anr, bezeichnung FROM artikel";
+        String sql = "SELECT a.anr, a.bezeichnung, p.preis FROM artikel a left join preise p on p.anr = a.anr where gueltig_bis is null";
         try {
             data.clear();
             prep = DbConnection.prepareStatement(sql);
             rs = prep.executeQuery();
             while (rs.next()) {
-                data.add(new Artikel(rs.getInt(1), rs.getString(2)));
+                data.add(new Artikel(rs.getInt(1), rs.getString(2), rs.getDouble(3)));
             }
 
         } catch (SQLException ex) {
@@ -81,7 +90,7 @@ public class FXMLDocumentController {
         fx_tabelle.setItems(data);
         //fx_tabelle.refresh();
     }
-    
+
     @FXML
     void handleAddAction(ActionEvent event) {
         nameTextField.requestFocus();
@@ -135,12 +144,13 @@ public class FXMLDocumentController {
         }
         updateTable();
     }
-    
+
     @FXML
     void handleUpdateAction(ActionEvent event) {
-        nameUpdateTextField.requestFocus();
         nameUpdateTextField.setDisable(false);
         updateButton.setDisable(false);
+        nameUpdateTextField.setText(fx_tabelle.getItems().get(lastClickedItem).getBezeichnung());
+        nameUpdateTextField.requestFocus();
     }
 
     @FXML
@@ -164,6 +174,34 @@ public class FXMLDocumentController {
     }
 
     @FXML
+    void handleChangePriceAction(ActionEvent event) {
+        priceUpdateTextField.setText("" + fx_tabelle.getItems().get(lastClickedItem).getPreis());
+        changePriceButton.setDisable(false);
+        priceUpdateTextField.setDisable(false);
+        priceUpdateTextField.requestFocus();
+    }
+
+    @FXML
+    void handleChangePriceButtonAction(ActionEvent event) {
+        PreparedStatement prep;
+        // sql statement abaendern
+        String sql = "UPDATE preise SET PREIS='" + priceUpdateTextField.getText() + 
+                "' WHERE ANR=" + fx_tabelle.getItems().get(lastClickedItem).getAnr() +
+                " AND gueltig_bis is null";
+        System.out.println(sql);
+        try {
+            prep = DbConnection.prepareStatement(sql);
+            prep.execute(sql);
+        } catch (SQLException ex) {
+            Logger.getLogger(FXMLDocumentController.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        updateTable();
+        changePriceButton.setDisable(true);
+        priceUpdateTextField.setDisable(true);
+        priceUpdateTextField.clear();
+    }
+
+    @FXML
     void initialize() {
         TableColumn ColAnr = new TableColumn("Anr");
         ColAnr.setMinWidth(100);
@@ -175,7 +213,13 @@ public class FXMLDocumentController {
         ColBezeichnung.setCellValueFactory(
                 new PropertyValueFactory<>("bezeichnung"));
 
-        fx_tabelle.getColumns().addAll(ColAnr, ColBezeichnung);
+        TableColumn colPreis = new TableColumn("Preis");
+        colPreis.setMinWidth(100);
+        colPreis.setCellValueFactory(
+                new PropertyValueFactory<>("preis")
+        );
+
+        fx_tabelle.getColumns().addAll(ColAnr, ColBezeichnung, colPreis);
 
         fx_tabelle.setRowFactory(tv -> {
             TableRow<Artikel> row = new TableRow<>();
@@ -202,9 +246,8 @@ public class FXMLDocumentController {
         } catch (SQLException ex) {
             Logger.getLogger(FXMLDocumentController.class.getName()).log(Level.SEVERE, null, ex);
         }
-        
-        updateTable();
 
+        updateTable();
     }
 
     public String makeConnectionString(String host) {
